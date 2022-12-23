@@ -24,13 +24,19 @@ namespace MusicDownloadASPNET.Controllers
                 return NotFound();
             }
 
-            //string path = Environment.CurrentDirectory + "\\" + link;
-            //if (System.IO.File.Exists(path))
-            //{
-            //    return File(System.IO.File.OpenRead(path), "application/octet-stream", Path.GetFileName(path));
-            //}
-
             _rabbit.SendMusicDownloadRequest(link);
+
+            while (!_rabbit.GetCompletedDownloadsList().Contains(link))
+            {
+                Thread.Sleep(100);
+            }
+
+            string path = "/app/music/" + link + ".txt";
+            if (System.IO.File.Exists(path))
+            {
+                return File(System.IO.File.OpenRead(path), "application/octet-stream", Path.GetFileName(path));
+            }
+
             return NotFound();
         }
 
