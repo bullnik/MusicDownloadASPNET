@@ -26,17 +26,26 @@ namespace MusicDownloadASPNET.Controllers
 
             _rabbit.SendMusicDownloadRequest(link);
 
-            while (!_rabbit.GetCompletedDownloadsList().Contains(link))
+            link = link.Replace("/", "a");
+
+            string path = "/app/music/" + link + ".mp3";
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+            while (timer.ElapsedMilliseconds < 30000 
+                && !System.IO.File.Exists(path))
             {
-                Thread.Sleep(100);
+                Console.WriteLine("WAIT");
+                Thread.Sleep(1000);
             }
 
-            string path = "/app/music/" + link + ".txt";
             if (System.IO.File.Exists(path))
             {
-                return File(System.IO.File.OpenRead(path), "application/octet-stream", Path.GetFileName(path));
+                Console.WriteLine("FILE EXISTS!!");
+                Thread.Sleep(1000);
+                return File(System.IO.File.OpenRead(path), "application/octet-stream", "video.mp3");
             }
 
+            Console.WriteLine("FILE NOT EXISTS");
             return NotFound();
         }
 
