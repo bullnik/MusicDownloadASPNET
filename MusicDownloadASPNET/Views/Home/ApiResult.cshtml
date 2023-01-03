@@ -1,0 +1,21 @@
+﻿@model MusicDownloadASPNET.Downloader.DownloadStatusInfo
+
+<div class="text-center">
+
+    @if (Model.Downloaded)
+    {
+        <p class="fw-bold" id="resulttext">Загружено</p>
+        <a id="miniolink" class="btn btn-primary" href="@Model.MinioLink" role="button">Link</a>
+    }
+
+    @if (Model.Error)
+    {
+        <p class="fw-bold" id="resulttext">Не удается скачать видео по данной ссылке</p>
+    }
+
+    @if (!Model.Downloaded && !Model.Error)
+    {
+        <p class="fw-bold" id="resulttext">Загрузка...</p>
+    }
+
+</div>

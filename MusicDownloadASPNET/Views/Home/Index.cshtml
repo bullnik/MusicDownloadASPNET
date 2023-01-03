@@ -5,16 +5,19 @@
 }
 
 <div class="text-center">
-    <h1 class="display-10">@Model.RootFolder</h1>
-    <h1 class="display-10">@Model.Files</h1>
 
     <div class="row p-2">
         <input id="link" type="text" class="form-control" placeholder="Введите ссылку на музыку">
     </div>
 
     <div class="row p-2">
-        <button id="download" type="button" class="btn btn-light">Скачать!</button>
+        <button id="download" type="button" class="btn btn-light">Загрузить на сервер</button>
     </div>
+
+    <div class="container" id="apiresult">
+
+    </div>
+
 </div>
 
 @section Scripts {
@@ -23,8 +26,33 @@
             $('#download').click(function (e) {
                 e.preventDefault();
                 var link = $('#link').val();
-                window.location.href = '@Url.Action("Download", "Home")?link=' + link;
+                console.log(link)
+
+                while (true) {
+                    var resulttext = 'Загрузка..'
+                    try {
+                        $('#apiresult').load('@Url.Action("Download", "Home")?link=' + link, function() { 
+                            var resulttext = $('#resulttext').text();
+                            console.log(resulttext)
+                            if (resulttext != 'Загрузка...') {
+                                break;
+                            }
+                            console.log("пробуем еще разок бычок");
+                        });
+                    } catch (error) {
+                        console.log(error);
+                        break;
+                    }
+                }
             });
         });
+
+        function sleepFor(sleepDuration){
+            var now = new Date().getTime();
+            while(new Date().getTime() < now + sleepDuration){ 
+                /* Do nothing */ 
+            }
+        }
+
     </script>
 }

@@ -1,52 +1,28 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using MusicDownloadASPNET.Downloader;
 using MusicDownloadASPNET.Models;
 using MusicDownloadASPNET.Rabbit;
 using System.Diagnostics;
+using System.Web;
+using static System.Net.WebRequestMethods;
 
 namespace MusicDownloadASPNET.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-        private readonly IRabbitMqService _rabbit;
+        readonly IDownloaderAPI _downloaderAPI;
 
-        public HomeController(ILogger<HomeController> logger, IRabbitMqService mqService)
+        public HomeController(IDownloaderAPI downloaderAPI)
         {
-            _logger = logger;
-            _rabbit = mqService;
+            _downloaderAPI = downloaderAPI;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Download(string link)
+        public IActionResult Download(string link)
         {
-            if (link is null)
-            {
-                return NotFound();
-            }
-
-            _rabbit.SendMusicDownloadRequest(link);
-
-            link = link.Replace("/", "a");
-
-            string path = "/app/music/" + link + ".mp3";
-            Stopwatch timer = new Stopwatch();
-            timer.Start();
-            while (timer.ElapsedMilliseconds < 30000 
-                && !System.IO.File.Exists(path))
-            {
-                Console.WriteLine("WAIT");
-                Thread.Sleep(1000);
-            }
-
-            if (System.IO.File.Exists(path))
-            {
-                Console.WriteLine("FILE EXISTS!!");
-                Thread.Sleep(1000);
-                return File(System.IO.File.OpenRead(path), "application/octet-stream", "video.mp3");
-            }
-
-            Console.WriteLine("FILE NOT EXISTS");
-            return NotFound();
+            DownloadStatusInfo downloadStatusInfo = _downloaderAPI.Download(link);
+            return PartialView("ApiResult", downloadStatusInfo);
         }
 
         public IActionResult Index()
