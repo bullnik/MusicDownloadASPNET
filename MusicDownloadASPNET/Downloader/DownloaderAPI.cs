@@ -7,15 +7,21 @@ namespace MusicDownloadASPNET.Downloader
     public class DownloaderAPI : IDownloaderAPI
     {
         private readonly HttpClient _http = new();
+        private readonly string _apiEndpoint;
 
         public DownloaderAPI() 
-        { 
-            
+        {
+            string? apiEndpoint = Environment.GetEnvironmentVariable("API_ENDPOINT");
+            if (apiEndpoint is null )
+            {
+                throw new Exception("Environment not specified");
+            }
+            _apiEndpoint = apiEndpoint;
         }
 
         public DownloadStatusInfo Download(string link)
         {
-            var builder = new UriBuilder($"http://api:80/Home/Download");
+            var builder = new UriBuilder($"http://{_apiEndpoint}/Home/Download");
             var query = HttpUtility.ParseQueryString(builder.Query);
             query["link"] = link;
             builder.Query = query.ToString();
