@@ -11,7 +11,7 @@
     </div>
 
     <div class="row p-2">
-        <button id="download" type="button" class="btn btn-light">Загрузить на сервер</button>
+        <button id="download" type="button" class="btn btn-light">Загрузить</button>
     </div>
 
     <div class="container" id="apiresult">
@@ -27,31 +27,26 @@
                 e.preventDefault();
                 var link = $('#link').val();
                 console.log(link)
-
-                while (true) {
-                    var resulttext = 'Загрузка..'
-                    try {
-                        $('#apiresult').load('@Url.Action("Download", "Home")?link=' + link, function() { 
-                            var resulttext = $('#resulttext').text();
-                            console.log(resulttext)
-                            if (resulttext != 'Загрузка...') {
-                                break;
-                            }
-                            console.log("пробуем еще разок бычок");
-                        });
-                    } catch (error) {
-                        console.log(error);
-                        break;
-                    }
-                }
+                waitForResponse(link);
             });
         });
 
-        function sleepFor(sleepDuration){
-            var now = new Date().getTime();
-            while(new Date().getTime() < now + sleepDuration){ 
-                /* Do nothing */ 
-            }
+        function waitForResponse(link) {
+            console.log('waitforresponse');
+            $.ajax({
+                method: "GET",
+                url: "@Url.Action("Download", "Home")",
+                data: { link: link }
+            }).done(function(html) {
+                $("#apiresult").empty();
+                $("#apiresult").append(html);
+                var resulttext = $('#resulttext').text();
+                console.log(resulttext);
+                if (resulttext == 'Загрузка...') {
+                    console.log('start waitforresponse');
+                    waitForResponse(link);
+                }
+            });
         }
 
     </script>
