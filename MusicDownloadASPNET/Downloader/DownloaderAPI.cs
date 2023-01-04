@@ -15,7 +15,7 @@ namespace MusicDownloadASPNET.Downloader
 
         public DownloadStatusInfo Download(string link)
         {
-            var builder = new UriBuilder($"https://localhost:7273/Home/Download");
+            var builder = new UriBuilder($"http://api:80/Home/Download");
             var query = HttpUtility.ParseQueryString(builder.Query);
             query["link"] = link;
             builder.Query = query.ToString();
