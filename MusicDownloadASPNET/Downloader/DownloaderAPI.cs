@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MusicDownloadASPNET.Rabbit;
+using Newtonsoft.Json;
 using System.Web;
 using static System.Net.WebRequestMethods;
 
@@ -6,32 +7,58 @@ namespace MusicDownloadASPNET.Downloader
 {
     public class DownloaderAPI : IDownloaderAPI
     {
-        private readonly HttpClient _http = new();
-        private readonly string _apiEndpoint;
+        private readonly IRabbitMqService _rabbit;
+        private readonly string _requestsQueueName;
+        private readonly string _resultsQueueName;
+        private readonly IList<string> _sendedRequests;
+        private readonly IDictionary<string, DownloadStatusInfo> _results;
 
-        public DownloaderAPI() 
+        public DownloaderAPI(IRabbitMqService rabbitMqService) 
         {
-            string? apiEndpoint = Environment.GetEnvironmentVariable("API_ENDPOINT");
-            if (apiEndpoint is null )
-            {
-                throw new Exception("Environment not specified");
-            }
-            _apiEndpoint = apiEndpoint;
+            _requestsQueueName = "DownloadRequests";
+            _resultsQueueName = "DownloadResults";
+            _rabbit = rabbitMqService;
+            _sendedRequests = new List<string>();
+            _results = new Dictionary<string, DownloadStatusInfo>();
         }
 
         public DownloadStatusInfo Download(string link)
         {
-            var builder = new UriBuilder($"http://{_apiEndpoint}/Home/Download");
-            var query = HttpUtility.ParseQueryString(builder.Query);
-            query["link"] = link;
-            builder.Query = query.ToString();
-            string httpRequestString = builder.ToString();
-            string text = GetResponseTextWithHttp(httpRequestString, TimeSpan.FromSeconds(10));
-            DownloadStatusInfo? result = TryDeserialize(text);
-            return result is null ? new DownloadStatusInfo(false, 0, "", true) : result;
+            DownloadStatusInfo errorInfo = new(link);
+            if (!TryValidateLink(link, out string shortenedLink))
+            {
+                return errorInfo;
+            }
+            link = shortenedLink;
+
+            if (!_sendedRequests.Contains(link))
+            {
+                _sendedRequests.Add(link);
+                _rabbit.SendMessage(_requestsQueueName, link);
+            }
+
+            if (_rabbit.TryReceiveMessage(_resultsQueueName, out string resultText))
+            {
+                DownloadStatusInfo? result = TryDeserialize(resultText);
+                if (result is not null)
+                {
+                    _results.Add(result.Link, result);
+                }
+            }
+
+            if (_sendedRequests.Contains(link) && _results.ContainsKey(link))
+            {
+                DownloadStatusInfo info = _results[link];
+                _sendedRequests.Remove(link);
+                _results.Remove(link);
+                return info;
+            }
+
+            DownloadStatusInfo defaultInfo = new(link, error: false);
+            return defaultInfo;
         }
 
-        private DownloadStatusInfo? TryDeserialize(string text) 
+        private static DownloadStatusInfo? TryDeserialize(string text) 
         {
             try
             {
@@ -41,24 +68,15 @@ namespace MusicDownloadASPNET.Downloader
             return null;
         }
 
-        private string GetResponseTextWithHttp(string request, TimeSpan timeout)
+        private static bool TryValidateLink(string rawLink, out string validatedLink)
         {
-            try
+            validatedLink = "";
+            if (rawLink is null || rawLink.Split("v=").Length < 2)
             {
-                Task<HttpResponseMessage> httpRequest;
-                httpRequest = _http.GetAsync(request);
-                if (!httpRequest.Wait(timeout)
-                || httpRequest.Result.StatusCode != System.Net.HttpStatusCode.OK)
-                {
-                    return "";
-                }
-                var httpResponse = httpRequest.Result;
-                return httpResponse.Content.ReadAsStringAsync().Result;
+                return false;
             }
-            catch
-            {
-                return "";
-            }
+            validatedLink = rawLink.Split("v=")[1].Split('&')[0];
+            return true;
         }
     }
 }

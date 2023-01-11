@@ -4,21 +4,28 @@ namespace MusicDownloadASPNET.Downloader
 {
     public class DownloadStatusInfo
     {
-        [JsonProperty("downloaded")]
-        public bool Downloaded { get; set; }
-        [JsonProperty("progress")]
-        public int Progress { get; set; }
+        [JsonProperty("link")]
+        public string Link { get; set; }
+
         [JsonProperty("miniolink")]
         public string MinioLink { get; set; }
+
+        [JsonProperty("downloaded")]
+        public bool Downloaded { get; set; }
+
         [JsonProperty("error")]
         public bool Error { get; set; }
 
-        public DownloadStatusInfo(bool downloaded, int progress, string minioLink, bool error)
+        public DownloadStatusInfo(string link, string minioLink = "", bool error = true)
         {
-            Downloaded = downloaded;
-            Progress = progress;
+            Link = link;
             MinioLink = minioLink;
+            Downloaded = MinioLink != "";
             Error = error;
+            if (Downloaded)
+            {
+                Error = false;
+            }
         }
     }
 }

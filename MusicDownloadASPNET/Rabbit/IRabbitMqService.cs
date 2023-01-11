@@ -1,9 +1,9 @@
-﻿using System.Collections.ObjectModel;
-
-namespace MusicDownloadASPNET.Rabbit
+﻿namespace MusicDownloadASPNET.Rabbit
 {
     public interface IRabbitMqService
     {
-        void SendMusicDownloadRequest(string link);
+        public bool SendMessage(string queueName, string message);
+
+        public bool TryReceiveMessage(string queueName, out string message);
     }
 }
