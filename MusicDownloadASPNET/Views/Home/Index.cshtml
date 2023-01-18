@@ -44,7 +44,7 @@
                 console.log(resulttext);
                 if (resulttext == 'Загрузка...') {
                     console.log('start waitforresponse');
-                    waitForResponse(link);
+                    setTimeout(waitForResponse(link), 1000);
                 }
             });
         }

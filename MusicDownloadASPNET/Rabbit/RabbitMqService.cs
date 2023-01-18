@@ -1,12 +1,13 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Collections.Concurrent;
 using System.Text;
 
 namespace MusicDownloadASPNET.Rabbit
 {
     public class RabbitMqService : IRabbitMqService
     {
-        private readonly IDictionary<string, Queue<string>> _queues;
+        private readonly IDictionary<string, ConcurrentQueue<string>> _queues;
         private readonly IModel _model;
 
         public RabbitMqService()
@@ -20,7 +21,7 @@ namespace MusicDownloadASPNET.Rabbit
                 throw new Exception("Environment not specified");
             }
 
-            _queues = new Dictionary<string, Queue<string>>();
+            _queues = new ConcurrentDictionary<string, ConcurrentQueue<string>>();
             _model = GetConnectionFactory(rabbitUser, rabbitPassword, rabbitHostname)
                 .CreateConnection()
                 .CreateModel();
@@ -28,6 +29,7 @@ namespace MusicDownloadASPNET.Rabbit
 
         public bool SendMessage(string queueName, string message)
         {
+            Console.WriteLine("sended");
             DeclareQueue(queueName);
             byte[] body = Encoding.UTF8.GetBytes(message);
             _model.BasicPublish(exchange: "",
@@ -39,24 +41,17 @@ namespace MusicDownloadASPNET.Rabbit
 
         public bool TryReceiveMessage(string queueName, out string message)
         {
-            message = "";
             if (!_queues.ContainsKey(queueName))
             {
                 SetConsumer(queueName);
                 Thread.Sleep(250);
             }
 
-            lock(_queues)
-            {
-                Queue<string> queue = _queues[queueName];
-                if (queue.Count == 0)
-                {
-                    return false;
-                }
+            ConcurrentQueue<string> queue = _queues[queueName];
 
-                message = queue.Dequeue();
-                return true;
-            }
+            bool success = queue.TryDequeue(out string? result);
+            message = result is null ? "" : result;
+            return success;
         }
 
         private void SetConsumer(string queueName)
@@ -68,7 +63,9 @@ namespace MusicDownloadASPNET.Rabbit
             {
                 byte[] body = ea.Body.ToArray();
                 string message = Encoding.UTF8.GetString(body);
-                _queues[queueName].Enqueue(message);
+                ConcurrentQueue<string> queue = _queues[queueName];
+                queue.Enqueue(message);
+                Console.WriteLine("received");
             };
             _model.BasicConsume(queue: queueName,
                                  autoAck: true,

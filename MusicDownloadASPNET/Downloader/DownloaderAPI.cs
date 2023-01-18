@@ -42,15 +42,24 @@ namespace MusicDownloadASPNET.Downloader
                 DownloadStatusInfo? result = TryDeserialize(resultText);
                 if (result is not null)
                 {
-                    _results.Add(result.Link, result);
+                    lock (_results)
+                    {
+                        _results.Add(result.Link, result);
+                    }
                 }
             }
 
             if (_sendedRequests.Contains(link) && _results.ContainsKey(link))
             {
                 DownloadStatusInfo info = _results[link];
-                _sendedRequests.Remove(link);
-                _results.Remove(link);
+                lock(_sendedRequests)
+                {
+                    _sendedRequests.Remove(link);
+                }
+                lock(_results)
+                {
+                    _results.Remove(link);
+                }
                 return info;
             }
 
